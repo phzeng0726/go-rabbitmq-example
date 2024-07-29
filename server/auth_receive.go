@@ -1,16 +1,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
+	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
 
 const (
+	authApiURL     = "http://localhost:8080/api/v1/auth/login"
 	rabbitMQURL    = "amqp://guest:guest@localhost:5672/"
 	loginReqQueue  = "login_req" // The topic of "request login"
 	loginResQueue  = "login_res" // The topic of "token response"
@@ -24,12 +28,27 @@ type AuthRequest struct {
 }
 
 func login(authReq AuthRequest) (string, error) {
-	if authReq.Account != "my_account" || authReq.Password != "my_password" {
-		return "", errors.New("invalid credentials")
+	jsonData, err := json.Marshal(authReq)
+	if err != nil {
+		return "", fmt.Errorf("error marshaling data: %w", err)
 	}
 
-	token := "generate_a_success_token_for_user"
+	resp, err := http.Post(authApiURL, "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		return "", fmt.Errorf("error sending POST request: %w", err)
+	}
+	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected response status: %v", resp.Status)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("error reading response data: %w", err)
+	}
+
+	token := string(body)
 	return token, nil
 }
 

@@ -11,9 +11,9 @@ import (
 )
 
 const (
-	rabbitMQURL    = "amqp://guest:guest@localhost:5672/"
-	loginReqQueue  = "login_req" // The topic of "request login"
-	loginResQueue  = "login_res" // The topic of "token response"
+	rabbitMQURL    = "amqp://guest:guest@localhost:5672/" // TODO Replace with CloudAMQP URL
+	loginReqQueue  = "login_req"                          // The topic of "request login"
+	loginResQueue  = "login_res"                          // The topic of "token response"
 	publishTimeout = 5 * time.Second
 	messageTTL     = 3 * time.Minute // 3 minutes in milliseconds
 )
@@ -34,6 +34,7 @@ func loginHandler(ch *amqp.Channel) http.HandlerFunc {
 		account := authRequest["account"]
 		password := authRequest["password"]
 
+		// TODO password should be hashed or encrypted
 		publishAuthRequest(ch, account, password)
 
 		w.WriteHeader(http.StatusOK)
@@ -90,7 +91,8 @@ func publishAuthRequest(ch *amqp.Channel, account, password string) error {
 	return nil
 }
 
-// Equipment，send account and password to rabbitmq
+// 1. Send(Publish) account and encrypted password to RabbitMQ
+// 2. Receive(Consume) token or err from RabbitMQ
 func main() {
 	// Connect to RabbitMQ
 	conn, err := amqp.Dial(rabbitMQURL)

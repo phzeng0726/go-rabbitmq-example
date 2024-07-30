@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	authApiURL     = "http://localhost:8080/api/v1/auth/login"
-	rabbitMQURL    = "amqp://guest:guest@localhost:5672/"
-	loginReqQueue  = "login_req" // The topic of "request login"
-	loginResQueue  = "login_res" // The topic of "token response"
+	authApiURL     = "http://localhost:8080/api/v1/auth/login" // TODO Replace with Auth API URL
+	rabbitMQURL    = "amqp://guest:guest@localhost:5672/"      // TODO Replace with CloudAMQP URL
+	loginReqQueue  = "login_req"                               // The topic of "request login"
+	loginResQueue  = "login_res"                               // The topic of "token response"
 	publishTimeout = 5 * time.Second
 	messageTTL     = 3 * time.Minute // 3 minutes in milliseconds
 )
@@ -100,6 +100,7 @@ func processMessage(body []byte, ch *amqp.Channel) {
 		return
 	}
 
+	// TODO password should be decrypted
 	token, err := login(authReq)
 	if err != nil {
 		log.Printf("Failed to login: %s", err)
@@ -111,6 +112,9 @@ func processMessage(body []byte, ch *amqp.Channel) {
 	}
 }
 
+// 1. Receive(Consume) account and encrypted password from RabbitMQ
+// 2. Call the auth api using account and decrypted password
+// 3. Send(Publish) token or err to RabbitMQ
 func main() {
 	// Connect to RabbitMQ
 	conn, err := amqp.Dial(rabbitMQURL)
